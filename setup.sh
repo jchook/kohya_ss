@@ -184,7 +184,7 @@ install_python_dependencies() {
 
   # Switch to local virtual env
   echo "Switching to virtual Python environment."
-  if ! inDocker; then
+  if ! useVenv; then
     if command -v python3.10 >/dev/null; then
       python3.10 -m venv "$DIR/venv"
     elif command -v python3 >/dev/null; then
@@ -216,7 +216,7 @@ install_python_dependencies() {
       ;;
   esac
 
-  if [ -n "$VIRTUAL_ENV" ] && ! inDocker; then
+  if [ -n "$VIRTUAL_ENV" ] && ! useVenv; then
     if command -v deactivate >/dev/null; then
       echo "Exiting Python virtual environment."
       deactivate
@@ -306,7 +306,7 @@ while getopts ":vb:d:g:inprus-:" opt; do
     OPTARG="${OPTARG#$opt}" # extract long option argument (may be empty)
     OPTARG="${OPTARG#=}"    # if long option argument, remove assigning `=`
   fi
-  
+
   case $opt in
   b | branch) BRANCH="$OPTARG" ;;
   d | dir) DIR="$OPTARG" ;;
@@ -317,6 +317,7 @@ while getopts ":vb:d:g:inprus-:" opt; do
   r | runpod) RUNPOD=true ;;
   s | skip-space-check) SKIP_SPACE_CHECK=true ;;
   u | no-gui) SKIP_GUI=true ;;
+  venv) USE_VENV=true ;;
   v) ((VERBOSITY = VERBOSITY + 1)) ;;
   h) display_help && exit 0 ;;
   *) display_help && exit 0 ;;
@@ -421,6 +422,10 @@ inDocker() {
   fi
 }
 
+useVenv() {
+  [ "$USE_VENV" = true ] || ! inDocker
+}
+
 # Start OS-specific detection and work
 if [[ "$OSTYPE" == "lin"* ]]; then
   # Check if root or sudo
@@ -516,7 +521,7 @@ if [[ "$OSTYPE" == "lin"* ]]; then
 
   # We need just a little bit more setup for non-interactive environments
   if [ "$RUNPOD" = true ]; then
-    if inDocker; then
+    if useVenv; then
       # We get the site-packages from python itself, then cut the string, so no other code changes required.
       VENV_DIR=$(python -c "import site; print(site.getsitepackages()[0])")
       VENV_DIR="${VENV_DIR%/lib/python3.10/site-packages}"
